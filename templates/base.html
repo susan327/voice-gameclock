@@ -133,6 +133,55 @@
     </div>
   </footer>
 
-  {% block body_end %}{% endblock %}
+  {% block body_end %}
+  <!-- ✅ iOS/iPadOS Safari向け：SpeechSynthesis解放＆復帰ワークアラウンド（全ページ共通適用） -->
+  <script>
+  (function(){
+    if (!('speechSynthesis' in window)) return;
+
+    let unlocked = false;
+
+    function lazyLoadVoices(retry=0){
+      // iOSは初回 getVoices() が空のことが多い → 遅延で何度か試す
+      const list = speechSynthesis.getVoices();
+      if (list && list.length) return;
+      if (retry < 20) setTimeout(()=>lazyLoadVoices(retry+1), 250);
+    }
+
+    function unlockSpeech(){
+      if (unlocked) return;
+      try {
+        // 無音の短い発話で“ユーザー操作由来の再生”を1度だけ確立
+        const u = new SpeechSynthesisUtterance("スタート");
+        u.lang = "ja-JP";
+        u.volume = 0;  // 無音
+        u.rate = 1;
+        speechSynthesis.speak(u);
+        // キュー掃除（権限は維持される）
+        setTimeout(()=>speechSynthesis.cancel(), 0);
+        // 念のため resume
+        speechSynthesis.resume?.();
+        unlocked = true;
+      } catch(e) {}
+    }
+
+    // 最初のユーザー操作で解放（どの画面でもOK）
+    ['click','touchend','keydown'].forEach(ev=>{
+      window.addEventListener(ev, unlockSpeech, { once:true, capture:true });
+    });
+
+    // タブ復帰・フォーカス復帰で読み上げが止まる問題をケア
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) speechSynthesis.resume?.(); });
+    window.addEventListener('focus', ()=>{ speechSynthesis.resume?.(); });
+
+    // iOSの voice リスト遅延対策
+    lazyLoadVoices();
+    speechSynthesis.onvoiceschanged = lazyLoadVoices;
+
+    // 既存ページからも任意で呼べるように公開（任意）
+    window.unlockSpeech = unlockSpeech;
+  })();
+  </script>
+  {% endblock %}
 </body>
 </html>
