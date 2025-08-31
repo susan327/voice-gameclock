@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}切れ負け方式 | 読み上げ対局時計{% endblock %}
+{% block content %}
+<style>
+  :root{ --danger:#e11d48; --active-blue:#0666ff; }
+  *{box-sizing:border-box}
+  h1{font-size:20px;margin:8px 0 12px}
+  .muted{color:var(--muted);margin:0 0 16px}
+
+  .row{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap}
+  .col,.group{display:flex;flex-direction:column;gap:8px;min-width:260px}
+  .boards{display:flex;gap:16px;flex-wrap:wrap}
+  @media (orientation:portrait){ .boards{flex-direction:column} }
+  .boards.reverse{flex-direction:row-reverse}
+  @media (orientation:portrait){ .boards.reverse{flex-direction:column-reverse} }
+
+  .card{
+    border:2px solid var(--accent);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    flex:1; min-width:280px;
+    background:var(--card);
+    box-shadow:2px 4px 10px rgba(0,0,0,.10);
+    transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .card.active{
+    border-color:var(--active-blue);
+    box-shadow:0 0 0 3px rgba(6,102,255,.18);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.55)),
+      var(--paper);
+  }
+
+  .controlsSection{margin-top:18px}
+  .controlsCard{
+    max-width:980px;width:100%;
+    border:2px solid var(--accent);
+    border-radius:var(--radius);
+    background:var(--card);
+    padding:12px 16px 14px;
+    box-shadow:2px 4px 10px rgba(0,0,0,.10);
+  }
+  @media (min-width:640px){ .controlsCard{position:sticky;bottom:0} }
+
+  .title{font-weight:800;margin-bottom:6px;letter-spacing:.02em}
+  .remain{
+    font-family:system-ui,"Noto Sans JP","Yu Gothic",sans-serif;
+    font-size:46px; line-height:1.2;
+    font-variant-numeric:tabular-nums; letter-spacing:.02em;
+  }
+  .remain.red{ color:var(--danger); font-weight:400 }
+  .remain.dead{ color:var(--danger); font-weight:800 }
+
+  input[type=number], select{ width:120px; padding:8px 10px; border-radius:8px; border:1px solid var(--accent); background:#fff; outline:none }
+  input[type=number]:focus, select:focus{ box-shadow:0 0 0 3px rgba(122,143,82,.25); border-color:var(--accent) }
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field + .field{margin-top:6px}
+
+  button{ padding:10px 14px; border-radius:12px; border:1.5px solid var(--accent); background:#fff; cursor:pointer; user-select:none; font-weight:700 }
+  button.primary{ border-color:var(--active-blue); color:var(--active-blue); background:linear-gradient(180deg,#fff,#fffdf6) }
+  button.danger{ border-color:var(--danger); color:var(--danger) }
+  button:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(122,143,82,.25) }
+</style>
+
+<h1>読み上げ対局時計（切れ負け方式）</h1>
+<p class="muted">
+  持ち時間が 0 になった側が<strong>時間切れ負け</strong>。<br>
+  アナウンス：<strong>残り1分です</strong>／<strong>残り30秒です</strong>／<strong>残り20秒です</strong>／ラスト<strong>10秒</strong>は毎秒。<br>
+  表示は<strong>残り1分以内のみ赤</strong>。
+</p>
+
+<!-- 設定パネル（統一/個別） -->
+<div class="card">
+  <div class="row" style="align-items:center; gap:12px 16px;">
+    <button id="btnUnify" class="primary">先手・後手で統一する</button>
+    <span id="unifyHint" class="muted">（オフ）</span>
+  </div>
+  <div class="row settings">
+    <div class="col" id="groupA">
+      <div class="title" id="titleA">先手 設定</div>
+      <div class="field"><label>初期：時間</label><input type="number" id="setAh" min="0" max="24" step="1" value="0"></div>
+      <div class="field"><label>初期：分</label><input type="number" id="setAm" min="0" max="59" step="1" value="5"></div>
+    </div>
+    <div class="col" id="groupB">
+      <div class="title">後手 設定</div>
+      <div class="field"><label>初期：時間</label><input type="number" id="setBh" min="0" max="24" step="1" value="0"></div>
+      <div class="field"><label>初期：分</label><input type="number" id="setBm" min="0" max="59" step="1" value="5"></div>
+    </div>
+    <div class="col">
+      <div class="title">読み上げ</div>
+      <label>声</label>
+      <select id="voicePref">
+        <option value="male" selected>男性</option>
+        <option value="female">女性</option>
+      </select>
+      <div style="margin-top:10px"><button class="primary" id="btnApply">適用</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- 盤面表示 -->
+<div class="row boards" id="boards">
+  <div id="cardA" class="card" role="button" aria-label="先手の時計（自分の番でタップすると着手）">
+    <div class="title">先手 残り</div>
+    <div id="remainA" class="remain">5:00</div>
+  </div>
+  <div id="cardB" class="card" role="button" aria-label="後手の時計（自分の番でタップすると着手）">
+    <div class="title">後手 残り</div>
+    <div id="remainB" class="remain">5:00</div>
+  </div>
+</div>
+
+<!-- 下コントロール -->
+<div class="controlsSection">
+  <div id="controlsCard" class="controlsCard card">
+    <div class="row" style="align-items:center;justify-content:space-between;">
+      <div class="title">手番：<span id="turn">先手</span></div>
+      <button id="btnSwap">左右/上下 入れ替え</button>
+    </div>
+    <div class="controls" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="primary" id="btnStart">スタート / 再開</button>
+      <button id="btnStop">一時停止</button>
+      <button id="btnSwitch">手番切替（Enter）</button>
+      <button class="danger" id="btnNew">新しく始める（設定値で）</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== ユーティリティ =====
+const q=id=>document.getElementById(id);
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,Number(v)||0));
+function fmtClock(ms){ if(ms<0) ms=0; const s=Math.floor(ms/1000); const m=Math.floor(s/60); const r=s%60; return `${m}:${String(r).padStart(2,'0')}`; }
+
+// ===== 統一トグル =====
+let unify=false;
+function updateSettingsUI(){
+  q('groupB').style.display = unify ? 'none' : '';
+  q('titleA').textContent   = unify ? '設定' : '先手 設定';
+  q('btnUnify').textContent = unify ? '統一を解除する' : '先手・後手で統一する';
+  q('unifyHint').textContent= unify ? '（オン：先手設定が両方に適用）' : '（オフ）';
+}
+function syncBfromA(){ q('setBh').value=q('setAh').value; q('setBm').value=q('setAm').value; }
+q('btnUnify').addEventListener('click',()=>{ unify=!unify; if(unify) syncBfromA(); updateSettingsUI(); });
+['setAh','setAm'].forEach(id=>{ q(id).addEventListener('input',()=>{ if(unify) syncBfromA(); }); q(id).addEventListener('change',()=>{ if(unify) syncBfromA(); }); });
+
+// ===== 状態 =====
+let current='A';
+let msLeft={A:5*60*1000, B:5*60*1000};
+let timeUp={A:false,B:false};
+let ticking=false, stepTimer=null, nextAt=0, lastSwitchAt=0;
+const SWITCH_COOLDOWN_MS=200;
+
+// ラスト10秒 読み上げ予約
+let finalTimers={A:[],B:[]};
+let lastCountdownFlag={A:false,B:false};
+
+// しきい値アナウンス（1m/30s/20s）既読管理
+let markersSpoken={A:new Set(), B:new Set()};
+
+// ===== 音声 =====
+let voices=[], selectedVoice=null, voicePref='male';
+function loadVoices(){ if(!('speechSynthesis'in window)) return; const all=speechSynthesis.getVoices(); voices=all.filter(v=>(v.lang||'').toLowerCase().startsWith('ja'))||all; pickVoice(); }
+function pickVoice(){ if(!voices.length) return; const female=['Kyoko','Kyōko','Mizuki','Nozomi','Sayaka','Ayumi','Hina','Yuri','Akiko','Female','女性']; const male=['Otoya','Ichiro','Taro','Hattori','Kenji','Hideo','Takeo','Male','男性']; const m=(v,h)=>((v.name||'')+' '+(v.voiceURI||'')).toLowerCase().includes(h.toLowerCase()); selectedVoice=(voicePref==='female')?(voices.find(v=>female.some(h=>m(v,h)))||voices.find(v=>/female/i.test(v.name))||voices[0]):(voices.find(v=>male.some(h=>m(v,h)))||voices.find(v=>/male/i.test(v.name))||voices[0]); }
+if(typeof speechSynthesis!=='undefined'){ speechSynthesis.onvoiceschanged=loadVoices; setTimeout(loadVoices,0); }
+q('voicePref').addEventListener('change', e=>{ voicePref=e.target.value; pickVoice(); });
+function speak(t,{rate=1.04}={}){ if(!window.speechSynthesis) return; const u=new SpeechSynthesisUtterance(t); u.lang=(selectedVoice&&selectedVoice.lang)||'ja-JP'; u.voice=selectedVoice||null; u.rate=rate; u.pitch=1; u.volume=1; speechSynthesis.speak(u); }
+function speakStrict(t,rate=1.10){ if(!window.speechSynthesis) return; try{speechSynthesis.cancel();speechSynthesis.resume?.();}catch(e){} const u=new SpeechSynthesisUtterance(t); u.lang=(selectedVoice&&selectedVoice.lang)||'ja-JP'; u.voice=selectedVoice||null; u.rate=rate; u.pitch=1; u.volume=1; speechSynthesis.speak(u); }
+function speakNum(n){ const map={10:'じゅう',9:'きゅう',8:'はち',7:'なな',6:'ろく',5:'ご',4:'よん',3:'さん',2:'に',1:'いち'}; speakStrict(map[n]||String(n),1.12); }
+
+// ===== ラスト10秒 予約 =====
+function clearFinal(side){ (finalTimers[side]||[]).forEach(id=>clearTimeout(id)); finalTimers[side]=[]; lastCountdownFlag[side]=false; }
+function clearAllFinal(){ clearFinal('A'); clearFinal('B'); }
+function scheduleFinalFrom(side,startSec){
+  if(lastCountdownFlag[side]) return;
+  lastCountdownFlag[side]=true;
+  clearFinal(side);
+  for(let i=startSec;i>=1;i--){
+    const num=i; const offset=(startSec-i)*1000+40;
+    const id=setTimeout(()=>{ if(current!==side || timeUp[side] || !ticking) return; speakNum(num); }, offset);
+    finalTimers[side].push(id);
+  }
+}
+
+// ===== UI描画 =====
+function updateUI(){
+  ['A','B'].forEach(p=>{
+    const el=q('remain'+p);
+    if(timeUp[p]){ el.textContent='時間切れ'; el.classList.add('dead','red'); return; }
+    el.classList.remove('dead');
+    el.textContent=fmtClock(msLeft[p]);
+    // ★赤は「残り1分以内のみ」
+    el.classList.toggle('red', msLeft[p] > 0 && msLeft[p] <= 60_000);
+  });
+  q('turn').textContent = (current==='A' ? '先手' : '後手');
+  q('cardA').classList.toggle('active', current==='A');
+  q('cardB').classList.toggle('active', current==='B');
+}
+
+// ===== 完全停止（適用/新規開始の前に必ず呼ぶ）=====
+function stopClock(){
+  ticking=false;
+  if(stepTimer){ clearTimeout(stepTimer); stepTimer=null; }
+  clearAllFinal();
+  try{ speechSynthesis?.cancel(); }catch(e){}
+}
+
+// ===== 入力適用／新規開始 =====
+function applyFromInputs(){
+  const Ah=clamp(q('setAh').value,0,24), Am=clamp(q('setAm').value,0,59);
+  const Bh=clamp(q('setBh').value,0,24), Bm=clamp(q('setBm').value,0,59);
+  msLeft.A=((Ah*60)+Am)*60*1000; msLeft.B=((Bh*60)+Bm)*60*1000;
+  timeUp.A=timeUp.B=false;
+  markersSpoken.A.clear(); markersSpoken.B.clear();
+  clearAllFinal();
+  current='A';
+  updateUI();
+}
+function newGame(){ applyFromInputs(); }
+
+// ===== 手番切替／盤入替 =====
+function swapBoards(){ q('boards').classList.toggle('reverse'); }
+function switchTurn(manual=true){
+  const now=performance.now(); if(now-lastSwitchAt < SWITCH_COOLDOWN_MS) return; lastSwitchAt=now; if(timeUp[current]) return;
+  // 前手番のラスト10秒予約を止める（誤読防止）
+  clearFinal('A'); clearFinal('B');
+  current = (current==='A'?'B':'A');
+  // 新手番の残りが<=10秒なら数字カウントを予約
+  const secLeft=Math.ceil(msLeft[current]/1000);
+  if(secLeft<=10 && secLeft>0){ scheduleFinalFrom(current, secLeft); }
+  updateUI();
+}
+
+// ===== アナウンス（1分/30秒/20秒 & ラスト10秒） =====
+function handleAnnouncements(p, beforeMs, afterMs){
+  const thresholds=[60,30,20];
+  const before=Math.ceil(beforeMs/1000);
+  const after =Math.ceil(afterMs /1000);
+  for(const th of thresholds){
+    if(before>th && after<=th && !markersSpoken[p].has(th)){
+      markersSpoken[p].add(th);
+      if(th===60){ speak('残り1分です',{rate:1.06}); }
+      else{ speak(`残り${th}秒です`,{rate:1.06}); } // 30秒/20秒
+    }
+  }
+  if(afterMs<=0){ speak('時間切れです',{rate:1.06}); }
+}
+
+// ===== 進行（秒境界同期） =====
+function step(){
+  if(!ticking){ stepTimer=null; return; }
+  const p=current; const before=msLeft[p];
+
+  msLeft[p]-=1000; if(msLeft[p]<=0){ msLeft[p]=0; timeUp[p]=true; }
+
+  // ラスト10秒予約（未予約で10秒域に入ったら予約）
+  if(!timeUp[p]){
+    const secLeft=Math.ceil(msLeft[p]/1000);
+    if(secLeft<=10 && secLeft>0 && !lastCountdownFlag[p]){ scheduleFinalFrom(p, secLeft); }
+  }
+
+  handleAnnouncements(p, before, msLeft[p]);
+  updateUI();
+
+  if(timeUp[p]){ ticking=false; stepTimer=null; return; }
+
+  nextAt += 1000; const delay=Math.max(0, nextAt - performance.now());
+  stepTimer=setTimeout(step, delay);
+}
+
+// ===== ボタン配線 =====
+q('btnApply').addEventListener('click', ()=>{
+  stopClock();       // ★必ず停止
+  applyFromInputs(); // 値反映のみ（ここでは走らない）
+  updateUI();
+});
+q('btnNew').addEventListener('click', ()=>{
+  stopClock();  // ★必ず停止
+  newGame();    // 設定値で初期化
+  updateUI();
+});
+q('btnStart').addEventListener('click', ()=>{
+  if(ticking) return;
+  ticking=true;
+  const now=performance.now();
+  nextAt= now + (1000 - Math.floor(now)%1000);
+  stepTimer=setTimeout(step, Math.max(0, nextAt-now));
+});
+q('btnStop').addEventListener('click', ()=>{ stopClock(); });
+q('btnSwitch').addEventListener('click', ()=>{ switchTurn(true); });
+q('btnSwap').addEventListener('click', ()=>{ swapBoards(); });
+['cardA','cardB'].forEach(id=>{
+  q(id).addEventListener('click', ()=>{
+    if((id==='cardA' && current==='B')||(id==='cardB' && current==='A')) return;
+    switchTurn(true);
+  });
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); switchTurn(true); } });
+
+// 初期化
+applyFromInputs(); updateSettingsUI(); updateUI();
+</script>
+{% endblock %}

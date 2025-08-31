@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}読み上げ対局時計{% endblock %}</title>
+  <style>
+    :root{
+      --paper: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" fill="%23deb887"/><path d="M0 59h60" stroke="%23cdaa7d" stroke-width="2"/><path d="M0 30h60" stroke="%23cdaa7d" stroke-width="2"/><path d="M30 0v60" stroke="%23cdaa7d" stroke-width="2"/></svg>');
+      --card: rgba(255,255,255,.85);
+      --accent: #8b5a2b;      /* 茶色 */
+      --muted: #5b5b5b;
+      --shadow: 0 1px 0 rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
+      --radius: 16px;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; color:#1f2937;
+      background: var(--paper);
+      font-family: "Hiragino Mincho ProN","Yu Mincho","Sawarabi Mincho",serif;
+    }
+    a{color:#0f172a;text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* ヘッダー（茶色） */
+    header{
+      position: static;
+      z-index: 40;
+      background:#8b5a2b;
+      color:#fff;
+      border-bottom:2px solid #5c3a1e;
+      box-shadow: var(--shadow);
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:10px 16px}
+    .row{display:flex;align-items:center;gap:14px}
+
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;color:#fff}
+
+    .nav-links{display:flex;gap:12px;flex-wrap:wrap}
+    .nav-links a{padding:8px 10px;border-radius:10px;color:#fff}
+    .nav-links a:hover{background:rgba(255,255,255,.15)}
+
+    /* メイン */
+    main{min-height:calc(100vh - 220px)}
+
+    /* フッター（茶色） */
+    footer{margin-top:20px;border-top:2px solid #5c3a1e;background:#8b5a2b;box-shadow:var(--shadow);color:#fff}
+    .foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+    .foot-links{display:flex;gap:12px;flex-wrap:wrap}
+    .foot-links a{padding:6px 8px;border-radius:10px;color:#fff}
+    .foot-links a:hover{background:rgba(255,255,255,.15)}
+
+    /* モバイルメニュー（簡易） */
+    details.menu{display:none}
+    @media (max-width:840px){
+      .nav-links{display:none}
+      details.menu{display:block}
+      summary{list-style:none;padding:8px 10px;border:1.5px solid #fff;border-radius:10px;cursor:pointer;background:#8b5a2b;color:#fff}
+      .nav-col{display:flex;flex-direction:column;margin-top:10px}
+      .nav-col a{padding:10px 8px;border-bottom:1px dashed #d9cfae;color:#fff}
+      .nav-col a:last-child{border-bottom:none}
+    }
+
+    /* フラッシュメッセージ */
+    .flash-wrap{margin:10px auto}
+    .flash{
+      background:#fff;border:2px solid #d2b48c;border-radius:12px;
+      padding:.6rem 1rem;margin:.4rem 0; box-shadow: var(--shadow);
+    }
+    .flash.success{border-color:#8b5a2b}
+    .flash.error{border-color:#7f1d1d}
+    /* スクリーンリーダー向けライブ領域 */
+    .sr-live{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="row" style="justify-content:space-between;">
+        <div class="brand">
+          <div>読み上げ対局時計</div>
+        </div>
+        <nav class="nav-links" aria-label="グローバルナビゲーション">
+          <a href="{{ url_for('index') }}">ホーム</a>
+          <a href="{{ url_for('chessclock') }}">チェスクロック</a>
+          <a href="{{ url_for('stopwatch') }}">ストップウォッチ</a>
+          <a href="{{ url_for('fischer') }}">フィッシャー</a>
+          <a href="{{ url_for('consideration') }}">考慮時間</a>
+          <a href="{{ url_for('sudden_death') }}">切れ負け</a>
+        </nav>
+        <details class="menu">
+          <summary aria-label="メニューを開閉">メニュー</summary>
+          <nav class="nav-col" aria-label="モバイルナビゲーション">
+            <a href="{{ url_for('index') }}">ホーム</a>
+            <a href="{{ url_for('chessclock') }}">チェスクロック</a>
+            <a href="{{ url_for('stopwatch') }}">ストップウォッチ</a>
+            <a href="{{ url_for('fischer') }}">フィッシャー</a>
+            <a href="{{ url_for('consideration') }}">考慮時間</a>
+            <a href="{{ url_for('sudden_death') }}">切れ負け</a>
+          </nav>
+        </details>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- フラッシュメッセージ：ここで一元表示 -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap" aria-live="polite">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <div>© {{ now().year }} すーさんプロジェクト</div>
+      <div class="foot-links" role="navigation" aria-label="フッターナビ">
+        <a href="{{ url_for('credit') }}">クレジット</a>
+        <a href="https://susanproject.jp" target="_blank" rel="noopener">公式サイト</a>
+        <a href="https://x.com/susan_program" target="_blank" rel="noopener">X</a>
+        <a href="{{ url_for('terms') }}">利用規約</a>
+        <a href="{{ url_for('privacy') }}">プライバシー</a>
+        <a href="{{ url_for('contact') }}">ご意見・お問い合わせ</a>
+      </div>
+    </div>
+  </footer>
+
+  {% block body_end %}{% endblock %}
+</body>
+</html>

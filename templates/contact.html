@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}ご意見・お問い合わせ | 読み上げ対局時計{% endblock %}
+{% block content %}
+<style>
+  .paper { max-width:900px; margin:0 auto 2rem; background:rgba(255,248,220,.95);
+    padding:1.5rem 2rem; border-radius:12px; border:2px solid #d2b48c; }
+  .paper h1{ text-align:center; margin-bottom:1rem; font-size:1.8rem; }
+  .paper p{ font-size:.95rem; line-height:1.7; }
+
+  form{ display:grid; gap:14px; max-width:680px; margin-top:1rem; }
+  label .req{ font-size:.8rem; margin-left:.4rem; padding:.05rem .4rem; border:1px solid var(--accent);
+    border-radius:8px; background:#fff; }
+  input,textarea,select{ width:100%; padding:.6rem; border:1px solid #d2b48c; border-radius:10px; background:#fff; font:inherit; }
+  textarea{ min-height:160px; }
+
+  /* ← フォーム専用にリネーム */
+  .form-row{ display:grid; gap:16px; }
+  @media (min-width:720px){ .form-row{ grid-template-columns:1fr 1fr; } }
+
+  .hint{ font-size:.85rem; color:var(--muted); margin-top:.25rem; }
+  .actions{ display:flex; gap:8px; align-items:center; margin-top:4px; }
+  .btn{ padding:.6rem 1.2rem; border-radius:12px; border:1.5px solid #8b5a2b; background:#fff; font-weight:700; cursor:pointer; }
+  .btn[disabled]{ opacity:.5; cursor:not-allowed; }
+
+  /* 同意チェック */
+  .agree{ display:inline-flex; align-items:center; gap:6px; font-size:.9rem; cursor:pointer; }
+  .agree input[type="checkbox"]{
+    width:22px; height:22px; cursor:pointer; appearance:none;
+    border:2px solid #000; border-radius:4px; position:relative; display:inline-block;
+  }
+  .agree input[type="checkbox"]:checked::after{
+    content:""; position:absolute; top:2px; left:6px; width:6px; height:12px;
+    border:solid #000; border-width:0 2px 2px 0; transform:rotate(45deg);
+  }
+
+  .count{ font-size:.85rem; color:var(--muted); }
+  .hp{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
+</style>
+
+<section class="paper">
+  <h1>ご意見・お問い合わせ</h1>
+  <p class="muted">通常 <strong>2〜3日以内</strong> を目安に返信します（内容によって前後します）。</p>
+
+  <form id="contactForm" method="post" action="{{ url_for('contact') }}" novalidate>
+    <!-- ハニーポット -->
+    <div class="hp">
+      <label>このフィールドは入力しないでください
+        <input type="text" name="website" autocomplete="off" tabindex="-1">
+      </label>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="name">お名前 <span class="req">必須</span></label>
+        <input id="name" name="name" autocomplete="name" required placeholder="例）山田 太郎">
+      </div>
+      <div>
+        <label for="email">メールアドレス <span class="req">必須</span></label>
+        <input id="email" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="例）taro@example.com">
+      </div>
+    </div>
+
+    <div>
+      <label for="topic">件名カテゴリ</label>
+      <select id="topic" name="topic">
+        <option value="">選択してください（任意）</option>
+        <option>バグ報告</option>
+        <option>機能提案</option>
+        <option>使い方の質問</option>
+        <option>利用規約・ポリシーに関する問い合わせ</option>
+        <option>コラボ・取材依頼</option>
+        <option value="その他">その他</option>
+      </select>
+    </div>
+
+    <!-- 「その他」選択時だけ出る自由件名 -->
+    <div id="otherTopicBox" style="display:none;">
+      <label for="otherTopic">その他の件名</label>
+      <input id="otherTopic" name="otherTopic" placeholder="件名を入力してください">
+    </div>
+
+    <div>
+      <label for="message">内容 <span class="req">必須</span></label>
+      <textarea id="message" name="message" required maxlength="1000"
+        placeholder="なるべく具体的にご記入ください（再現手順・環境など）"></textarea>
+      <div class="actions">
+        <span class="count"><span id="mc">0</span>/1000</span>
+      </div>
+    </div>
+
+    <!-- 同意（文の右に黒枠チェック） -->
+    <label class="agree" for="agree">
+      <span><a href="{{ url_for('terms') }}">利用規約</a>・<a href="{{ url_for('privacy') }}">プライバシーポリシー</a> に同意します</span>
+      <input id="agree" type="checkbox" required>
+    </label>
+
+    <div class="actions">
+      <button id="submitBtn" class="btn" type="submit" disabled>送信</button>
+      <span class="hint" id="saveHint">下書きは自動保存されます</span>
+    </div>
+
+    <!-- クライアントメタ -->
+    <input type="hidden" name="client_ua" id="client_ua">
+    <input type="hidden" name="client_lang" id="client_lang">
+    <input type="hidden" name="client_tz" id="client_tz">
+  </form>
+</section>
+
+<script>
+(() => {
+  const f = document.getElementById('contactForm');
+  const nameI = document.getElementById('name');
+  const emailI = document.getElementById('email');
+  const msgI = document.getElementById('message');
+  const agreeI = document.getElementById('agree');
+  const submitBtn = document.getElementById('submitBtn');
+  const mc = document.getElementById('mc');
+  const topicSel = document.getElementById('topic');
+  const otherBox = document.getElementById('otherTopicBox');
+  const otherInput = document.getElementById('otherTopic');
+
+  const updateCount = () => mc.textContent = msgI.value.length;
+  msgI.addEventListener('input', updateCount); updateCount();
+
+  const KEY = 'contactDraft:v1';
+  const saveDraft = () => {
+    const payload = {
+      name: nameI.value, email: emailI.value, message: msgI.value,
+      topic: topicSel.value, otherTopic: otherInput.value, agree: agreeI.checked
+    };
+    localStorage.setItem(KEY, JSON.stringify(payload));
+  };
+  const loadDraft = () => {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.name) nameI.value = d.name;
+      if (d.email) emailI.value = d.email;
+      if (d.message) msgI.value = d.message;
+      if (d.topic) topicSel.value = d.topic;
+      if (d.otherTopic) otherInput.value = d.otherTopic;
+      agreeI.checked = !!d.agree;
+      toggleOtherBox();
+      updateCount();
+    } catch {}
+  };
+
+  function toggleOtherBox() {
+    if (topicSel.value === "その他") {
+      otherBox.style.display = "block";
+      otherInput.required = true;
+    } else {
+      otherBox.style.display = "none";
+      otherInput.required = false;
+      otherInput.value = "";
+    }
+  }
+
+  ['input','change'].forEach(evt =>
+    f.addEventListener(evt, () => { saveDraft(); validate(); })
+  );
+  topicSel.addEventListener('change', toggleOtherBox);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadDraft();
+    document.getElementById('client_ua').value = navigator.userAgent || '';
+    document.getElementById('client_lang').value = navigator.language || '';
+    try { document.getElementById('client_tz').value = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch {}
+    validate();
+  });
+
+  function validate(){
+    const ok = nameI.value.trim()
+      && emailI.validity.valid
+      && msgI.value.trim().length >= 10
+      && agreeI.checked
+      && (topicSel.value !== "その他" || otherInput.value.trim());
+    submitBtn.disabled = !ok;
+  }
+
+  f.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      if (!submitBtn.disabled) f.requestSubmit();
+    }
+  });
+
+  f.addEventListener('submit', (e) => {
+    const hp = f.querySelector('input[name="website"]');
+    if (hp && hp.value) { e.preventDefault(); return; }
+    localStorage.removeItem(KEY);
+  });
+})();
+</script>
+{% endblock %}

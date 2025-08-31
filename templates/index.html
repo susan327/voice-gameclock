@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}読み上げ対局時計{% endblock %}
+{% block content %}
+<style>
+  .hero { text-align:center; padding: 2rem 1rem 0; }
+  .hero h1 { font-size: 2.2rem; margin: 0; }
+  .hero p { margin:.6rem 0 0; color:#5c4033; }
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.2rem; padding: 2rem; max-width: 1200px; margin: 0 auto;
+  }
+  .card {
+    background: rgba(255, 248, 220, 0.95);
+    border: 2px solid #d2b48c; border-radius: 12px; padding: 1.5rem;
+    box-shadow: 2px 4px 8px rgba(0,0,0,0.15);
+    transition: transform .2s, box-shadow .2s; text-decoration: none; color: inherit;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 4px 6px 12px rgba(0,0,0,0.25); }
+  .card h3 { margin: 0 0 .8rem; font-size: 1.4rem; color: #2f1e1e; }
+  .card p { font-size: .95rem; line-height: 1.6; }
+</style>
+
+<section class="hero">
+  <h1>読み上げ対局時計</h1>
+  <p>秒読みが、熱戦をもっとリアルに</p>
+</section>
+
+<div class="cards" aria-label="方式一覧">
+  <a class="card" href="{{ url_for('chessclock') }}">
+    <h3>チェスクロック方式</h3>
+    <p>王座戦・叡王戦などで採用。持ち時間が切れたら秒読みに移行する一般的なスタイル。</p>
+  </a>
+  <a class="card" href="{{ url_for('stopwatch') }}">
+    <h3>ストップウォッチ方式</h3>
+    <p>名人戦・竜王戦などで採用。１分未満の消費は切り捨てられるシステム。</p>
+  </a>
+  <a class="card" href="{{ url_for('fischer') }}">
+    <h3>フィッシャー方式</h3>
+    <p>abemaトーナメントなどで採用。１手ごとに決められた時間が加算されていく方式。</p>
+  </a>
+  <a class="card" href="{{ url_for('consideration') }}">
+    <h3>考慮時間方式</h3>
+    <p>NHK杯などで採用。持ち時間を使い切ったら秒読み。数回の考慮時間が設けられているのが特徴。</p>
+  </a>
+  <a class="card" href="{{ url_for('sudden_death') }}">
+    <h3>切れ負け方式</h3>
+    <p>持ち時間が0になった時点で即負けとなる方式。スリリングで緊張感が高い。</p>
+  </a>
+</div>
+{% endblock %}

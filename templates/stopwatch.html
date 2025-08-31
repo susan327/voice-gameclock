@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}ストップウォッチ方式 | 読み上げ対局時計（和風UI・統一版）{% endblock %}
+{% block content %}
+<style>
+  :root{ --danger:#e11d48; --active-blue:#0666ff; }
+  *{ box-sizing:border-box }
+  h1{ font-size:20px; margin:8px 0 12px } /* タイトルサイズを他方式と統一 */
+  .muted{ color:var(--muted); margin:0 0 16px }
+  .row{ display:flex; gap:16px; align-items:stretch; flex-wrap:wrap }
+  .col{ display:flex; flex-direction:column; gap:6px }
+
+  /* 和風カード */
+  .card{
+    border:2px solid var(--accent);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    flex:1; min-width:280px;
+    background:var(--card);
+    box-shadow:2px 4px 10px rgba(0,0,0,.10);
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .card.active{
+    border-color:var(--active-blue);
+    box-shadow:0 0 0 3px rgba(6,102,255,.18);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.55)),
+      var(--paper);
+  }
+  .title{ font-weight:800; margin-bottom:6px; letter-spacing:.02em }
+
+  /* 残り時間（フォント統一） */
+  .remain{
+    font-family: system-ui, "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size:46px; line-height:1.2;
+    font-variant-numeric: tabular-nums; letter-spacing:.02em;
+  }
+  .remain.red{ color:var(--danger) }
+
+  /* 秒バーは現仕様を踏襲 */
+  .barRow{ display:flex; align-items:center; gap:10px; margin-top:10px }
+  .label{ color:var(--muted); font-size:13px }
+  .sec-bar-container{ width:180px; height:10px; background:#eee; border:1px solid #ccc; border-radius:6px; display:inline-block }
+  .sec-bar{ height:100%; width:100%; background:#0f172a; border-radius:6px; transition:width 1s linear }
+  .sec-bar.red{ background:var(--danger) }
+
+  /* 配置（縦持ち対応） */
+  .row.boards{ display:flex }
+  @media (orientation:portrait){ .row.boards{ flex-direction:column } }
+  .row.boards.reverse{ flex-direction:row-reverse }
+  @media (orientation:portrait){ .row.boards.reverse{ flex-direction:column-reverse } }
+
+  /* 入力とボタン（和風統一） */
+  input[type=number], select{
+    padding:8px 10px; border-radius:8px; border:1px solid var(--accent); width:110px; background:#fff; outline:none
+  }
+  input[type=number]:focus, select:focus{ box-shadow:0 0 0 3px rgba(122,143,82,.25); border-color:var(--accent) }
+  button{
+    padding:10px 14px; border-radius:12px; border:1.5px solid var(--accent);
+    background:#fff; cursor:pointer; user-select:none; font-weight:700
+  }
+  button.primary{ border-color:var(--active-blue); color:var(--active-blue); background:linear-gradient(180deg,#fff,#fffdf6) }
+  button.danger{ border-color:var(--danger); color:var(--danger) }
+
+  /* 下パネルも和風カード化 */
+  .controlsSection{ margin-top:18px }
+  .controlsCard{
+    max-width:980px; width:100%;
+    border:2px solid var(--accent); border-radius:var(--radius);
+    background:var(--card); padding:12px 16px 14px;
+    box-shadow:2px 4px 10px rgba(0,0,0,.10);
+  }
+  @media (min-width:640px){ .controlsCard{ position:sticky; bottom:0 } }
+</style>
+
+<h1>読み上げ対局時計（ストップウォッチ方式）</h1>
+<p class="muted">
+  1分未満は切り捨て。Enter または<strong>自分側の時計タップ</strong>で手番切替。<br>
+  残り1分の側は分表示とバーが赤に。
+</p>
+
+<!-- 設定：統一/個別トグル -->
+<div class="card">
+  <div class="row" style="align-items:center; gap:12px 16px;">
+    <button id="btnUnify" class="primary">先手・後手で統一する</button>
+    <span id="unifyHint" class="muted">（オフ）</span>
+  </div>
+
+  <div class="row settings">
+    <div class="col" id="groupA">
+      <div class="title" id="titleA">先手 設定</div>
+      <label>初期：時間</label>
+      <input type="number" id="setAh" min="0" max="24" step="1" value="0">
+      <label>初期：分</label>
+      <input type="number" id="setAm" min="0" max="59" step="1" value="10">
+      <label>読み上げ開始（分）</label>
+      <input type="number" id="announceA" min="0" max="1440" step="1" value="10">
+    </div>
+
+    <div class="col" id="groupB">
+      <div class="title">後手 設定</div>
+      <label>初期：時間</label>
+      <input type="number" id="setBh" min="0" max="24" step="1" value="0">
+      <label>初期：分</label>
+      <input type="number" id="setBm" min="0" max="59" step="1" value="10">
+      <label>読み上げ開始（分）</label>
+      <input type="number" id="announceB" min="0" max="1440" step="1" value="10">
+    </div>
+
+    <div class="col">
+      <div class="title">読み上げ</div>
+      <label>声</label>
+      <select id="voicePref">
+        <option value="female">女性</option>
+        <option value="male" selected>男性</option>
+      </select>
+      <label>&nbsp;</label>
+      <!-- 文言統一：「適用」 -->
+      <button class="primary" id="btnApply">適用</button>
+    </div>
+  </div>
+</div>
+
+<!-- 時計 -->
+<div class="row boards" id="boards">
+  <div id="cardA" class="card" role="button" aria-label="先手の時計（自分の番でタップすると着手）">
+    <div class="title">先手 残り</div>
+    <div id="remainA" class="remain">5分</div>
+    <div class="barRow">
+      <span class="label">秒：</span>
+      <div class="sec-bar-container"><div id="secBarA" class="sec-bar"></div></div>
+    </div>
+  </div>
+
+  <div id="cardB" class="card" role="button" aria-label="後手の時計（自分の番でタップすると着手）">
+    <div class="title">後手 残り</div>
+    <div id="remainB" class="remain">5分</div>
+    <div class="barRow">
+      <span class="label">秒：</span>
+      <div class="sec-bar-container"><div id="secBarB" class="sec-bar"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 下パネル -->
+<div class="controlsSection" aria-label="操作パネル">
+  <div id="controlsCard" class="controlsCard card">
+    <div class="row" style="align-items:center; justify-content:space-between;">
+      <div class="title">手番：<span id="turn">先手</span></div>
+      <button id="btnSwap">左右/上下 入れ替え</button>
+    </div>
+    <div class="controls" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="primary" id="btnStart">スタート / 再開</button>
+      <button id="btnStop">一時停止</button>
+      <button id="btnSwitch">手番切替（Enter）</button>
+      <button class="danger" id="btnNew">新しく始める（設定値で）</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ====== ユーティリティ ======
+  const q = id => document.getElementById(id);
+  function clamp(v, lo=0, hi=24*60){ if(Number.isNaN(v)) return 5; return Math.max(lo, Math.min(hi, v)); }
+  function fmtRemain(minutes) {
+    if (minutes <= 0) return "時間切れ";
+    if (minutes >= 60) { const h = Math.floor(minutes/60), m = minutes%60; return `${h}時間${m}分`; }
+    return `${minutes}分`;
+  }
+
+  // ====== 統一/個別 切替 ======
+  let unify = false; // true=統一（先手の値が両者に適用）
+  function updateSettingsUI(){
+    q('groupB').style.display = unify ? 'none' : '';
+    q('titleA').textContent   = unify ? '設定' : '先手 設定';
+    q('btnUnify').textContent = unify ? '統一を解除する' : '先手・後手で統一する';
+    q('unifyHint').textContent= unify ? '（オン：先手設定が両方に適用）' : '（オフ）';
+  }
+  function syncBfromA(){
+    q('setBh').value    = q('setAh').value;
+    q('setBm').value    = q('setAm').value;
+    q('announceB').value= q('announceA').value;
+  }
+  q('btnUnify').addEventListener('click', ()=>{ unify=!unify; if(unify) syncBfromA(); updateSettingsUI(); });
+  ['setAh','setAm','announceA'].forEach(id=>{
+    q(id).addEventListener('input', ()=>{ if(unify) syncBfromA(); });
+    q(id).addEventListener('change', ()=>{ if(unify) syncBfromA(); });
+  });
+
+  // ====== 状態 ======
+  let elapsed = 0;
+  let current = "A";
+  let timeLeft = { A: 5, B: 5 };
+  let announceFrom = { A: 10, B: 10 };
+  let ticking = false;
+  let nextAt = 0;
+  let lastSwitchAt = 0;
+  const SWITCH_COOLDOWN_MS = 250;
+
+  const FINAL_LEAD_MS = 120;
+  let finalTimers = [];
+
+  // ====== 音声 ======
+  let voices=[], selectedVoice=null, voicePref = (q("voicePref")?.value) || "male";
+  function loadVoices(){ const all=speechSynthesis.getVoices(); voices=all.filter(v=>(v.lang||"").toLowerCase().startsWith("ja"))||all; pickVoice(); }
+  function pickVoice(){
+    const female=["Kyoko","Kyōko","Mizuki","Nozomi","Sayaka","Ayumi","Hina","Yuri","Akiko","Female","女性"];
+    const male  =["Otoya","Ichiro","Taro","Hattori","Kenji","Hideo","Takeo","Male","男性"];
+    const match=(v,h)=>(((v.name||"") + " " + (v.voiceURI||"")).toLowerCase()).includes(h.toLowerCase());
+    selectedVoice = (voicePref==="female") ? (voices.find(v=>female.some(h=>match(v,h)))||voices.find(v=>/female/i.test(v.name))||voices[0])
+                                           : (voices.find(v=>male.some(h=>match(v,h)))  ||voices.find(v=>/male/i.test(v.name))  ||voices[0]);
+  }
+  if (typeof speechSynthesis!=="undefined"){ speechSynthesis.onvoiceschanged=()=>loadVoices(); setTimeout(loadVoices,0); }
+  q("voicePref").addEventListener("change",(e)=>{ voicePref=e.target.value; pickVoice(); });
+  function speak(text,{rate=1.0,priority=false}={}){ if(!window.speechSynthesis) return; if(priority) speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang=(selectedVoice&&selectedVoice.lang)||"ja-JP"; u.voice=selectedVoice||null; u.rate=rate; u.pitch=1; u.volume=1; speechSynthesis.speak(u); }
+  function speakStrict(text,rate=1.2){ if(!window.speechSynthesis) return; try{speechSynthesis.cancel();}catch(e){} try{speechSynthesis.resume?.();}catch(e){} const u=new SpeechSynthesisUtterance(text); u.lang=(selectedVoice&&selectedVoice.lang)||"ja-JP"; u.voice=selectedVoice||null; u.rate=rate; u.pitch=1; u.volume=1; speechSynthesis.speak(u); }
+  function readingForSecond(n){ const map={1:"いち",2:"に",3:"さん",4:"し",5:"ご",6:"ろく",7:"しち",8:"はち",9:"きゅう"}; return map[n]||String(n); }
+  function speakSecondStrict(n,rate=1.22){ speakStrict(readingForSecond(n),rate); }
+
+  // ====== 秒バー/UI ======
+  function updateSecondBar(player, secLeft, isCritical, isTimeout) {
+    const bar = q(player === "A" ? "secBarA" : "secBarB");
+    if (isTimeout) { bar.classList.add("timeout"); bar.classList.remove("red"); bar.style.width = "0%"; return; }
+    bar.classList.remove("timeout");
+    const percent = Math.max(0, Math.min(100, (secLeft / 60) * 100));
+    bar.style.width = percent + "%";
+    bar.classList.toggle("red", !!isCritical);
+  }
+  function updateUI() {
+    const setRemain = (p) => {
+      const minutes = timeLeft[p];
+      const el = q(p === "A" ? "remainA" : "remainB");
+      const isTimeout  = (minutes <= 0);
+      const isCritical = (minutes === 1);
+      el.textContent = fmtRemain(minutes);
+      el.classList.toggle("timeout", isTimeout);
+      el.classList.toggle("red", !isTimeout && isCritical);
+      return { isTimeout, isCritical };
+    };
+    const a = setRemain("A"), b = setRemain("B");
+
+    const cardA = q("cardA"), cardB = q("cardB");
+    if (current === "A") { cardA.classList.add("active"); cardB.classList.remove("active"); }
+    else { cardB.classList.add("active"); cardA.classList.remove("active"); }
+
+    const activeSecLeft = 60 - (elapsed % 60) || 60;
+    if (current === "A") { updateSecondBar("A", a.isTimeout ? 0 : activeSecLeft, a.isCritical, a.isTimeout);
+                           updateSecondBar("B", b.isTimeout ? 0 : 60,           b.isCritical, b.isTimeout);
+    } else {               updateSecondBar("B", b.isTimeout ? 0 : activeSecLeft, b.isCritical, b.isTimeout);
+                           updateSecondBar("A", a.isTimeout ? 0 : 60,            a.isCritical, a.isTimeout); }
+    const turnEl = q("turn"); if (turnEl) turnEl.textContent = (current === "A" ? "先手" : "後手");
+  }
+
+  // ====== 進行管理 ======
+  function startClock(){ if (ticking) return; ticking = true; nextAt = Date.now() + 1000; step(); }
+  function stopClock(){ ticking = false; }
+  function step(){ if(!ticking) return; tick(); const now = Date.now(); nextAt += 1000; setTimeout(step, Math.max(0, nextAt - now)); }
+
+  function shouldAnnounce(remMinutes){ return remMinutes <= announceFrom[current]; }
+  function scheduleFinalCount(){ clearFinalCount(); for (let i = 1; i <= 9; i++) { const tid=setTimeout(()=>{ speakSecondStrict(i,1.22); }, i*1000-120); finalTimers.push(tid);} }
+  function clearFinalCount(){ for (const t of finalTimers) clearTimeout(t); finalTimers=[]; }
+
+  function tick(){
+    elapsed++;
+    const secLeft = 60 - (elapsed % 60);
+    if (current === "A") updateSecondBar("A", secLeft === 0 ? 60 : secLeft, timeLeft.A === 1, timeLeft.A <= 0);
+    else                 updateSecondBar("B", secLeft === 0 ? 60 : secLeft, timeLeft.B === 1, timeLeft.B <= 0);
+
+    const sec = elapsed % 60;
+    const rem = timeLeft[current];
+    const announceOK = shouldAnnounce(rem);
+
+    if (rem > 1) {
+      if (announceOK && [30,40,50,55].includes(sec)) speak(`${sec}秒`, { rate: 1.05 });
+      if (sec === 0) {
+        timeLeft[current] = Math.max(0, rem - 1);
+        if (announceOK) {
+          if (timeLeft[current] >= 60) { const h=Math.floor(timeLeft[current]/60), m=timeLeft[current]%60; speak(`残り${h}時間${m}分です`, { rate: 1.05, priority: true }); }
+          else { speak(`残り${timeLeft[current]}分です`, { rate: 1.05, priority: true }); }
+        }
+        updateUI();
+      }
+    } else if (rem === 1) {
+      if (sec === 30 || sec === 40) speak(`${sec}秒`, { rate: 1.08 });
+      if (sec === 50) { speakStrict(`50秒`, 1.12); scheduleFinalCount(); }
+      if (sec === 0) { clearFinalCount(); timeLeft[current] = 0; updateUI(); speakStrict("時間切れです！", 1.05); stopClock(); }
+    } else { stopClock(); }
+  }
+
+  function switchTurn(){
+    const now = Date.now();
+    if (now - lastSwitchAt < SWITCH_COOLDOWN_MS) return;
+    lastSwitchAt = now;
+    stopClock(); clearFinalCount(); if (window.speechSynthesis) speechSynthesis.cancel();
+    elapsed = 0; current = (current === "A") ? "B" : "A"; updateUI();
+    try{ speechSynthesis?.resume?.(); }catch(e){}
+    startClock();
+  }
+
+  function initFromInputs(){
+    const aH=clamp(parseInt(q("setAh").value,10), 0, 24);
+    const aM=clamp(parseInt(q("setAm").value,10), 0, 59);
+    const bH=clamp(parseInt(q("setBh").value,10), 0, 24);
+    const bM=clamp(parseInt(q("setBm").value,10), 0, 59);
+    const aa=clamp(parseInt(q("announceA").value,10), 0, 24*60);
+    const bb=clamp(parseInt(q("announceB").value,10), 0, 24*60);
+    timeLeft.A = aH*60 + aM;
+    timeLeft.B = unify ? (aH*60 + aM) : (bH*60 + bM);
+    announceFrom.A = aa; announceFrom.B = unify ? aa : bb;
+  }
+  q("btnStart").addEventListener("click", startClock);
+  q("btnStop").addEventListener("click", () => { stopClock(); clearFinalCount(); });
+  q("btnSwitch").addEventListener("click", switchTurn);
+  q("btnNew").addEventListener("click", () => {
+    stopClock(); clearFinalCount(); if (window.speechSynthesis) speechSynthesis.cancel();
+    if (unify) syncBfromA();
+    elapsed = 0; current = "A"; initFromInputs(); updateUI();
+  });
+  q("btnApply").addEventListener("click", () => {
+    stopClock(); clearFinalCount(); if (window.speechSynthesis) speechSynthesis.cancel();
+    if (unify) syncBfromA();
+    elapsed = 0; current = "A"; initFromInputs(); updateUI();
+  });
+  window.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); switchTurn(); } });
+  q("cardA").addEventListener("click", () => { if (current === "A") switchTurn(); });
+  q("cardB").addEventListener("click", () => { if (current === "B") switchTurn(); });
+  q('btnSwap').addEventListener('click', ()=>{ q('boards').classList.toggle('reverse'); });
+
+  (function init(){
+    updateSettingsUI();
+    initFromInputs(); updateUI();
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}プライバシーポリシー | 読み上げ対局時計{% endblock %}
+{% block content %}
+<style>
+  .paper{max-width:900px;margin:0 auto 2rem;background:rgba(255,248,220,.95);padding:1.5rem 2rem;border-radius:12px;border:2px solid #d2b48c}
+  .paper h1{text-align:center;margin-bottom:1rem;font-size:1.8rem}
+  .paper h2{margin:1.2rem 0 .6rem;font-size:1.2rem}
+  .paper p,.paper li,.paper dd{font-size:.95rem;line-height:1.8}
+  ul{padding-left:1.2rem}
+  dl{display:grid;grid-template-columns:10.5rem 1fr;gap:8px 12px;margin:8px 0 0}
+  dt{font-weight:700} dd{margin:0}
+  .note{font-size:.9rem;color:var(--muted)}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:12px 0}
+</style>
+
+<section class="paper">
+  <h1>プライバシーポリシー</h1>
+  <p class="note">制定日：2025-08-30 ／ 最終更新日：2025-08-30</p>
+
+  <h2>適用範囲</h2>
+  <p>本プライバシーポリシーは、すーさんプロジェクト（以下「当方」）が提供する「読み上げ対局時計」（以下「本サービス」）における、利用者の情報の取扱いに関する方針を定めるものです。</p>
+
+  <h2>取得する情報</h2>
+  <dl>
+    <dt>問い合わせ情報</dt><dd>お名前、メールアドレス、本文など、<a href="{{ url_for('contact') }}">お問い合わせフォーム</a>に利用者が入力した情報</dd>
+    <dt>技術情報（サーバログ）</dt><dd>IP アドレス、ユーザーエージェント、リファラ、アクセス日時、エラー情報等の一般的なアクセスログ</dd>
+    <dt>利用状況</dt><dd>画面遷移や操作の最小限の記録（障害解析や品質改善のために必要な範囲）</dd>
+  </dl>
+
+  <h2>取得方法</h2>
+  <ul>
+    <li>利用者がフォームへ入力・送信することによる取得</li>
+    <li>サーバが通信の過程で自動的に生成・記録するアクセスログの取得</li>
+  </ul>
+
+  <h2>利用目的</h2>
+  <ul>
+    <li>お問い合わせへの回答、連絡のため</li>
+    <li>本サービスの保守、障害対応、品質改善のため</li>
+    <li>不正利用の防止、セキュリティ確保のため</li>
+  </ul>
+
+  <h2>第三者提供・委託</h2>
+  <ul>
+    <li>法令に基づく場合を除き、本人の同意なく第三者に提供しません。</li>
+    <li>運用上必要な範囲で、情報の取扱いを外部事業者に委託することがあります。この場合、委託先を適切に監督します。</li>
+  </ul>
+
+  <h2>安全管理措置</h2>
+  <ul>
+    <li>アクセス制御、最小権限、暗号化（可能な範囲）、ログ管理等の安全管理措置を講じます。</li>
+    <li>取得情報は、目的達成に必要な最小限の者のみがアクセスできるようにします。</li>
+  </ul>
+
+  <h2>保存期間</h2>
+  <ul>
+    <li>問い合わせ情報：対応完了後、必要な保管期間を経て削除・匿名化します。</li>
+    <li>サーバログ：セキュリティ・障害解析目的で一定期間保管し、その後削除・匿名化します。</li>
+  </ul>
+
+  <h2>開示・訂正・利用停止等の請求</h2>
+  <p>本人からの保有個人データに関する開示・訂正・追加・削除・利用停止等のご請求には、法令に従い適切に対応します。詳細は<a href="{{ url_for('contact') }}">お問い合わせフォーム</a>よりご連絡ください。ご本人確認のため、追加情報の提示をお願いする場合があります。</p>
+
+  <h2>未成年の利用者</h2>
+  <p>未成年の方が個人情報を送信する場合は、保護者の同意を得た上で行ってください。</p>
+
+  <h2>ポリシーの変更</h2>
+  <p>当方は、法令やサービス内容の変更等に応じて本ポリシーを改定することがあります。重要な変更を行う場合は、本サービス上でのお知らせ等により周知します。改定後に本サービスを利用した場合、改定後の内容に同意したものとみなします。</p>
+
+  <h2>お問い合わせ窓口</h2>
+  <p>本ポリシーに関するご質問は、<a href="{{ url_for('contact') }}">お問い合わせフォーム</a>からご連絡ください。</p>
+
+  <div class="divider"></div>
+  <p class="note">補足：本ポリシーは日本の個人情報保護法（APPI）の趣旨に基づき作成しています。実務運用に応じて見直しを行います。</p>
+</section>
+{% endblock %}

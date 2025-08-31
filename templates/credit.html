@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}クレジット | 読み上げ対局時計{% endblock %}
+{% block content %}
+<style>
+  .paper{max-width:900px;margin:0 auto 2rem;background:rgba(255,248,220,.95);padding:1.5rem 2rem;border-radius:12px;border:2px solid #d2b48c}
+  .paper h1{text-align:center;margin-bottom:1rem;font-size:1.8rem}
+  .paper h2{margin:1.2rem 0 .6rem;font-size:1.2rem}
+  .paper p,.paper li,.paper dd{font-size:.95rem;line-height:1.7}
+  dl{display:grid;grid-template-columns:10.5rem 1fr;gap:8px 12px;margin:8px 0 0}
+  dt{font-weight:700}dd{margin:0}
+  .chips{margin-top:6px}
+  .chip{display:inline-block;border:1px solid var(--accent);border-radius:999px;padding:.18rem .55rem;background:#fff;margin:.12rem .2rem 0 0;font-size:.92rem;font-weight:700}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:10px 0}
+</style>
+<section class="paper">
+  <h1>クレジット</h1>
+  <p><strong>企画・制作：</strong>すーさんプロジェクト</p>
+  <p class="muted">秒読みが、熱戦をもっとリアルに。和モダンの読み上げ対局時計。</p>
+
+  <h2>制作体制</h2>
+  <dl>
+    <dt>プロダクトオーナー / 仕様</dt><dd>すーさん</dd>
+    <dt>実装</dt><dd>フロントエンド / バックエンド：すーさん</dd>
+    <dt>UIデザイン</dt><dd>紙 × 竹 × 墨（和モダン）</dd>
+    <dt>制作（クレジット表記）</dt><dd>すーさんプロジェクト</dd>
+  </dl>
+
+  <h2>デザイン指針</h2>
+  <ul>
+    <li>可読性最優先：数値はタブラー体、残り1分は強調表示</li>
+    <li>操作性：スマホの親指リーチを意識したボタン配置</li>
+    <li>世界観：紙（生成り）× 竹色 × 墨で“道具感”と温度感を両立</li>
+  </ul>
+
+  <h2>技術スタック</h2>
+  <div class="chips">
+    <span class="chip">Python / Flask</span>
+    <span class="chip">Jinja2 Templates</span>
+    <span class="chip">HTML / CSS / JavaScript</span>
+    <span class="chip">Web Speech API（音声）</span>
+  </div>
+  <div class="divider"></div>
+  <dl class="small">
+    <dt>テンプレート基盤</dt><dd><code>base.html</code>（和風背景・ハンバーガー対応）</dd>
+    <dt>主要ページ</dt><dd>ホーム / ストップウォッチ / 利用規約 / プライバシー / お問い合わせ / クレジット</dd>
+  </dl>
+
+  <h2>音声・アクセシビリティ</h2>
+  <ul>
+    <li>Web Speech API による読み上げ（ブラウザ/OSの日本語ボイスに依存）</li>
+    <li>Esc でメニューを閉じる / 外側タップでクローズ / <code>aria-expanded</code>・<code>hidden</code> 対応</li>
+    <li>キーボード操作：Enterで手番切替（時計タップでも可）</li>
+  </ul>
+
+  <h2>動作環境</h2>
+  <dl>
+    <dt>推奨ブラウザ</dt><dd>最新の Chrome / Edge / Firefox、Android Chrome、iOS Safari</dd>
+    <dt>音声について</dt><dd>読み上げ品質は端末の音声エンジンに依存します</dd>
+  </dl>
+
+  <h2>帰属・ライセンス</h2>
+  <p>
+    本プロダクトのコードおよびデザインの著作権は、すーさんプロジェクトに帰属します。<br>
+    現在、外部配布素材は未使用です（必要に応じて今後追記）。
+  </p>
+</section>
+{% endblock %}
