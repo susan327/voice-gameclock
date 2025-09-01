@@ -13,7 +13,6 @@
   input,textarea,select{ width:100%; padding:.6rem; border:1px solid #d2b48c; border-radius:10px; background:#fff; font:inherit; }
   textarea{ min-height:160px; }
 
-  /* ← フォーム専用にリネーム */
   .form-row{ display:grid; gap:16px; }
   @media (min-width:720px){ .form-row{ grid-template-columns:1fr 1fr; } }
 
@@ -22,7 +21,21 @@
   .btn{ padding:.6rem 1.2rem; border-radius:12px; border:1.5px solid #8b5a2b; background:#fff; font-weight:700; cursor:pointer; }
   .btn[disabled]{ opacity:.5; cursor:not-allowed; }
 
-  /* 同意チェック */
+  /* ✅ 送信ボタンだけ青背景＋白文字 */
+  #submitBtn {
+  border:1.5px solid #0666ff;
+  background:#0666ff;   /* 青背景 */
+  color:#fff;           /* 白文字 */
+  font-weight:700;
+  cursor:pointer;
+  padding:.6rem 1.2rem;
+  border-radius:12px;
+}
+#submitBtn:hover {
+  background:#0052cc;   /* 濃い青に */
+  border-color:#0052cc;
+}
+
   .agree{ display:inline-flex; align-items:center; gap:6px; font-size:.9rem; cursor:pointer; }
   .agree input[type="checkbox"]{
     width:22px; height:22px; cursor:pointer; appearance:none;
@@ -73,7 +86,6 @@
       </select>
     </div>
 
-    <!-- 「その他」選択時だけ出る自由件名 -->
     <div id="otherTopicBox" style="display:none;">
       <label for="otherTopic">その他の件名</label>
       <input id="otherTopic" name="otherTopic" placeholder="件名を入力してください">
@@ -88,7 +100,6 @@
       </div>
     </div>
 
-    <!-- 同意（文の右に黒枠チェック） -->
     <label class="agree" for="agree">
       <span><a href="{{ url_for('terms') }}">利用規約</a>・<a href="{{ url_for('privacy') }}">プライバシーポリシー</a> に同意します</span>
       <input id="agree" type="checkbox" required>
@@ -99,7 +110,6 @@
       <span class="hint" id="saveHint">下書きは自動保存されます</span>
     </div>
 
-    <!-- クライアントメタ -->
     <input type="hidden" name="client_ua" id="client_ua">
     <input type="hidden" name="client_lang" id="client_lang">
     <input type="hidden" name="client_tz" id="client_tz">
