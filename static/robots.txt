@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://voice-gameclock.onrender.com/sitemap.xml

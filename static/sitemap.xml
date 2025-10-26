@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://voice-gameclock.onrender.com/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url><loc>https://voice-gameclock.onrender.com/chessclock</loc></url>
+  <url><loc>https://voice-gameclock.onrender.com/stopwatch</loc></url>
+  <url><loc>https://voice-gameclock.onrender.com/fischer</loc></url>
+  <url><loc>https://voice-gameclock.onrender.com/consideration</loc></url>
+  <url><loc>https://voice-gameclock.onrender.com/sudden_death</loc></url>
+  <url><loc>https://voice-gameclock.onrender.com/terms</loc></url>
+  <url><loc>https://voice-gameclock.onrender.com/privacy</loc></url>
+  <url><loc>https://voice-gameclock.onrender.com/contact</loc></url>
+</urlset>
