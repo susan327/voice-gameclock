@@ -6,39 +6,40 @@
 
   <title>{% block title %}読み上げ対局時計｜すーさんプロジェクト{% endblock %}</title>
 
-  {# ====== 基本SEO（各ページで上書き可） ====== #}
+  <!-- =========================
+       基本SEO設定
+  ========================= -->
   {% block meta_description %}
   <meta name="description" content="将棋・囲碁・チェス対応の読み上げ対局時計。秒読み／考慮時間／フィッシャー／切れ負けを網羅。音声読み上げで臨場感UP。">
   {% endblock %}
   <meta name="robots" content="index,follow">
-
-  {# ====== 正規URL（ページ固有） ====== #}
   <link rel="canonical" href="{{ request.url }}"/>
 
-  {# ====== OGP / Twitter Card（各ページで上書き可） ====== #}
-  {% block og_base %}
+  <!-- =========================
+       OGP / Twitter Card
+  ========================= -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="{% block og_title %}読み上げ対局時計｜すーさんプロジェクト{% endblock %}">
   <meta property="og:description" content="{% block og_description %}将棋・囲碁・チェス対応の読み上げ対局時計。秒読み／考慮時間／フィッシャー／切れ負けをサポート。音声読み上げで緊張感アップ。{% endblock %}">
   <meta property="og:url" content="{{ request.url }}">
-  <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='ogp.png', _external=True) }}{% endblock %}">
-  {% endblock %}
+  <meta property="og:image" content="{{ url_for('static', filename='ogp.png', _external=True) }}">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{% block twitter_title %}読み上げ対局時計｜すーさんプロジェクト{% endblock %}">
-  <meta name="twitter:description" content="{% block twitter_description %}音声読み上げつき対局時計。将棋・囲碁・チェス対応。{% endblock %}">
+  <meta name="twitter:title" content="読み上げ対局時計｜すーさんプロジェクト">
+  <meta name="twitter:description" content="音声読み上げつき対局時計。将棋・囲碁・チェス対応。">
   <meta name="twitter:image" content="{{ url_for('static', filename='ogp.png', _external=True) }}">
 
-  {# ====== アイコン類（任意のファイルがある場合） ====== #}
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 
-  {# ====== CSS（元のスタイル維持） ====== #}
+  <!-- =========================
+       デザイン（和モダン）
+  ========================= -->
   <style>
     :root{
       --paper: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" fill="%23deb887"/><path d="M0 59h60" stroke="%23cdaa7d" stroke-width="2"/><path d="M0 30h60" stroke="%23cdaa7d" stroke-width="2"/><path d="M30 0v60" stroke="%23cdaa7d" stroke-width="2"/></svg>');
       --card: rgba(255,255,255,.85);
-      --accent: #8b5a2b;      /* 茶色 */
+      --accent: #8b5a2b;
       --muted: #5b5b5b;
       --shadow: 0 1px 0 rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
       --radius: 16px;
@@ -52,10 +53,7 @@
     a{color:#0f172a;text-decoration:none}
     a:hover{text-decoration:underline}
 
-    /* ヘッダー（茶色） */
     header{
-      position: static;
-      z-index: 40;
       background:#8b5a2b;
       color:#fff;
       border-bottom:2px solid #5c3a1e;
@@ -63,54 +61,24 @@
     }
     .wrap{max-width:1100px;margin:0 auto;padding:10px 16px}
     .row{display:flex;align-items:center;gap:14px}
-
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;color:#fff}
-
+    .brand{font-weight:800;letter-spacing:.02em;color:#fff}
     .nav-links{display:flex;gap:12px;flex-wrap:wrap}
     .nav-links a{padding:8px 10px;border-radius:10px;color:#fff}
     .nav-links a:hover{background:rgba(255,255,255,.15)}
-
-    /* メイン */
     main{min-height:calc(100vh - 220px)}
-
-    /* フッター（茶色） */
     footer{margin-top:20px;border-top:2px solid #5c3a1e;background:#8b5a2b;box-shadow:var(--shadow);color:#fff}
     .foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
     .foot-links{display:flex;gap:12px;flex-wrap:wrap}
     .foot-links a{padding:6px 8px;border-radius:10px;color:#fff}
     .foot-links a:hover{background:rgba(255,255,255,.15)}
-
-    /* モバイルメニュー（簡易） */
-    details.menu{display:none}
-    @media (max-width:840px){
-      .nav-links{display:none}
-      details.menu{display:block}
-      summary{list-style:none;padding:8px 10px;border:1.5px solid #fff;border-radius:10px;cursor:pointer;background:#8b5a2b;color:#fff}
-      .nav-col{display:flex;flex-direction:column;margin-top:10px}
-      .nav-col a{padding:10px 8px;border-bottom:1px dashed #d9cfae;color:#fff}
-      .nav-col a:last-child{border-bottom:none}
-    }
-
-    /* フラッシュメッセージ */
-    .flash-wrap{margin:10px auto}
-    .flash{
-      background:#fff;border:2px solid #d2b48c;border-radius:12px;
-      padding:.6rem 1rem;margin:.4rem 0; box-shadow: var(--shadow);
-    }
-    .flash.success{border-color:#8b5a2b}
-    .flash.error{border-color:#7f1d1d}
-
-    /* スクリーンリーダー向けライブ領域 */
-    .sr-live{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
-
-    /* 視覚的には隠すが見出しとして有効（SEO/アクセシビリティ向上） */
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   </style>
 
-  {# 既存：各ページで追加したいhead要素を差し込む #}
   {% block head %}{% endblock %}
 
-  {# ====== 構造化データ（SoftwareApplication） ====== #}
+  <!-- =========================
+       構造化データ（SoftwareApplication）
+  ========================= -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -127,45 +95,40 @@
     }
   }
   </script>
+
+  <!-- =========================
+       Google Analytics 4（GA4）
+  ========================= -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-N2VTCEX2RY"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-N2VTCEX2RY');
+  </script>
 </head>
+
 <body>
   <header role="banner">
-    <div class="wrap">
-      <div class="row" style="justify-content:space-between;">
-        <div class="brand" aria-label="サイト名">
-          <div aria-hidden="true">読み上げ対局時計</div>
-        </div>
-        <nav class="nav-links" aria-label="グローバルナビゲーション">
-          <a href="{{ url_for('index') }}">ホーム</a>
-          <a href="{{ url_for('chessclock') }}">チェスクロック</a>
-          <a href="{{ url_for('stopwatch') }}">ストップウォッチ</a>
-          <a href="{{ url_for('fischer') }}">フィッシャー</a>
-          <a href="{{ url_for('consideration') }}">考慮時間</a>
-          <a href="{{ url_for('sudden_death') }}">切れ負け</a>
-        </nav>
-        <details class="menu">
-          <summary aria-label="メニューを開閉">メニュー</summary>
-          <nav class="nav-col" aria-label="モバイルナビゲーション">
-            <a href="{{ url_for('index') }}">ホーム</a>
-            <a href="{{ url_for('chessclock') }}">チェスクロック</a>
-            <a href="{{ url_for('stopwatch') }}">ストップウォッチ</a>
-            <a href="{{ url_for('fischer') }}">フィッシャー</a>
-            <a href="{{ url_for('consideration') }}">考慮時間</a>
-            <a href="{{ url_for('sudden_death') }}">切れ負け</a>
-          </nav>
-        </details>
-      </div>
+    <div class="wrap row" style="justify-content:space-between;">
+      <div class="brand">読み上げ対局時計</div>
+      <nav class="nav-links" aria-label="メインナビゲーション">
+        <a href="{{ url_for('index') }}">ホーム</a>
+        <a href="{{ url_for('chessclock') }}">チェスクロック</a>
+        <a href="{{ url_for('stopwatch') }}">ストップウォッチ</a>
+        <a href="{{ url_for('fischer') }}">フィッシャー</a>
+        <a href="{{ url_for('consideration') }}">考慮時間</a>
+        <a href="{{ url_for('sudden_death') }}">切れ負け</a>
+      </nav>
     </div>
   </header>
 
   <main class="wrap" role="main">
-    <!-- 視覚的には非表示だが、ページのメイン見出しとして機能 -->
     <h1 class="sr-only">読み上げ対局時計</h1>
 
-    <!-- フラッシュメッセージ：ここで一元表示 -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="flash-wrap" aria-live="polite">
+        <div aria-live="polite">
           {% for category, message in messages %}
             <div class="flash {{ category }}">{{ message }}</div>
           {% endfor %}
@@ -179,56 +142,33 @@
   <footer role="contentinfo">
     <div class="wrap foot">
       <div>© {{ now().year }} すーさんプロジェクト</div>
-      <div class="foot-links" role="navigation" aria-label="フッターナビ">
+      <div class="foot-links">
         <a href="{{ url_for('credit') }}">クレジット</a>
         <a href="https://susanproject.jp" target="_blank" rel="noopener">公式サイト</a>
         <a href="https://x.com/susan_program" target="_blank" rel="noopener">X</a>
         <a href="{{ url_for('terms') }}">利用規約</a>
         <a href="{{ url_for('privacy') }}">プライバシー</a>
-        <a href="{{ url_for('contact') }}">ご意見・お問い合わせ</a>
+        <a href="{{ url_for('contact') }}">お問い合わせ</a>
       </div>
     </div>
   </footer>
 
   {% block body_end %}
-  <!-- ✅ iOS/iPadOS Safari向け：SpeechSynthesis解放＆復帰ワークアラウンド（全ページ共通適用） -->
+  <!-- iOS Safari SpeechSynthesis 解放ワークアラウンド -->
   <script>
   (function(){
     if (!('speechSynthesis' in window)) return;
-
-    let unlocked = false;
-
-    function lazyLoadVoices(retry=0){
-      const list = speechSynthesis.getVoices();
-      if (list && list.length) return;
-      if (retry < 20) setTimeout(()=>lazyLoadVoices(retry+1), 250);
+    let unlocked=false;
+    function unlock(){
+      if(unlocked)return;
+      const u=new SpeechSynthesisUtterance("スタート");
+      u.lang="ja-JP";u.volume=0;speechSynthesis.speak(u);
+      setTimeout(()=>speechSynthesis.cancel(),0);
+      speechSynthesis.resume?.();unlocked=true;
     }
-
-    function unlockSpeech(){
-      if (unlocked) return;
-      try {
-        const u = new SpeechSynthesisUtterance("スタート");
-        u.lang = "ja-JP";
-        u.volume = 0;
-        u.rate = 1;
-        speechSynthesis.speak(u);
-        setTimeout(()=>speechSynthesis.cancel(), 0);
-        speechSynthesis.resume?.();
-        unlocked = true;
-      } catch(e) {}
-    }
-
-    ['click','touchend','keydown'].forEach(ev=>{
-      window.addEventListener(ev, unlockSpeech, { once:true, capture:true });
-    });
-
-    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) speechSynthesis.resume?.(); });
-    window.addEventListener('focus', ()=>{ speechSynthesis.resume?.(); });
-
-    lazyLoadVoices();
-    speechSynthesis.onvoiceschanged = lazyLoadVoices;
-
-    window.unlockSpeech = unlockSpeech;
+    ["click","touchend","keydown"].forEach(ev=>window.addEventListener(ev,unlock,{once:true}));
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)speechSynthesis.resume?.();});
+    window.addEventListener("focus",()=>speechSynthesis.resume?.());
   })();
   </script>
   {% endblock %}
