@@ -1,4 +1,4 @@
-# app.py
+# app.py — 読み上げ対局時計（Render/Flask）
 from datetime import datetime
 import os, smtplib, ssl
 from email.mime.text import MIMEText
@@ -6,23 +6,8 @@ from email.header import Header
 
 from flask import (
     Flask, render_template, request, jsonify,
-    redirect, url_for, flash
+    redirect, url_for, flash, send_from_directory
 )
-
-# --- Google Search Console 用: HTMLファイル確認 ---
-@app.route('/google5d7ab4edca390893.html')  # ←あなたのファイル名に合わせてそのままコピペ
-def google_verification():
-    return send_from_directory(app.static_folder, 'google5d7ab4edca390893.html')
-
-# --- SEO系（直下で配信したい系） ---
-@app.route('/robots.txt')
-def robots_txt():
-    return send_from_directory(app.static_folder, 'robots.txt')
-
-@app.route('/sitemap.xml')
-def sitemap_xml():
-    return send_from_directory(app.static_folder, 'sitemap.xml')
-
 
 # ---- .env 読み込み（環境変数で渡すなら不要）----
 try:
@@ -31,15 +16,18 @@ try:
 except Exception:
     pass
 
+# =========================
+# Flask App（1回だけ生成！）
+# =========================
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
 # ====== 環境変数（SMTP/メール先/秘密鍵） ======
-SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "25"))  # 465=SSL / 587=STARTTLS
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASS = os.getenv("SMTP_PASS", "")
-MAIL_FROM = os.getenv("MAIL_FROM", "no-reply@example.com")  # 送信者（表示名も可）
-MAIL_TO   = os.getenv("MAIL_TO", "owner@example.com")       # 受信先（あなたのメール）
+SMTP_HOST  = os.getenv("SMTP_HOST", "localhost")
+SMTP_PORT  = int(os.getenv("SMTP_PORT", "25"))  # 465=SSL / 587=STARTTLS
+SMTP_USER  = os.getenv("SMTP_USER", "")
+SMTP_PASS  = os.getenv("SMTP_PASS", "")
+MAIL_FROM  = os.getenv("MAIL_FROM", "no-reply@example.com")  # 送信者
+MAIL_TO    = os.getenv("MAIL_TO",   "owner@example.com")     # 受信先
 APP_SECRET = os.getenv("APP_SECRET", "dev-secret")
 app.secret_key = APP_SECRET
 
@@ -50,6 +38,24 @@ app.secret_key = APP_SECRET
 def inject_now():
     # {{ now().year }}, {{ now().strftime('%Y-%m-%d') }} などで利用可
     return {"now": lambda: datetime.now()}
+
+# =========================================
+# 直下で配信したい静的ファイル（SEO/検証用）
+# =========================================
+# Google Search Console 所有権確認ファイル
+# ※ファイル名は Search Console が発行した名前のまま！
+@app.route("/google5d7ab4edca390893.html")
+def google_verification():
+    return send_from_directory(app.static_folder, "google5d7ab4edca390893.html")
+
+# robots.txt / sitemap.xml をルート直下で配信
+@app.route("/robots.txt")
+def robots_txt():
+    return send_from_directory(app.static_folder, "robots.txt")
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    return send_from_directory(app.static_folder, "sitemap.xml")
 
 # =========================================
 # ページルート
@@ -104,12 +110,11 @@ def contact():
             flash("送信に失敗しました。もう一度お試しください。", "error")
             return redirect(url_for("contact"))
 
-        name         = (request.form.get("name") or "").strip()
-        email        = (request.form.get("email") or "").strip()
-        topic        = (request.form.get("topic") or "").strip()
-        other_topic  = (request.form.get("otherTopic") or "").strip()  # ← 追加（自由件名）
-        msg          = (request.form.get("message") or "").strip()
-        # agree = request.form.get("agree")  # UI上は必須。サーバでは特に利用なし
+        name        = (request.form.get("name") or "").strip()
+        email       = (request.form.get("email") or "").strip()
+        topic       = (request.form.get("topic") or "").strip()
+        other_topic = (request.form.get("otherTopic") or "").strip()  # 自由件名
+        msg         = (request.form.get("message") or "").strip()
 
         if not (name and email and len(msg) >= 10):
             flash("必須項目の入力に誤りがあります。", "error")
@@ -139,7 +144,7 @@ def contact():
         try:
             send_mail(MAIL_TO, subject, body)  # あなたの受信用
 
-            # 自動返信（ユーザー宛）— 不要ならコメントアウト
+            # 自動返信（ユーザー宛）— 不要ならコメントアウトOK
             try:
                 ack_subj = f"【読み上げ対局時計】お問い合わせを受け付けました - {topic_display}"
                 ack_body = (
@@ -152,7 +157,6 @@ def contact():
             except Exception:
                 pass
 
-            # ★ 成功メッセージを指定文言に
             flash("お問い合わせを受け付けました。メールが届かない場合はアドレスが間違っている可能性がありますので再度ご送信ください。", "success")
         except Exception as e:
             print("Mail send error:", e)
@@ -176,7 +180,7 @@ def api_contact():
         return jsonify({"ok": False, "error": "必須項目が未入力です。"}), 400
 
     subject = "【読み上げ対局時計】お問い合わせ(API)"
-    body = f"お名前: {name}\nメール: {email}\n--- 本文 ---\n{message}\n"
+    body    = f"お名前: {name}\nメール: {email}\n--- 本文 ---\n{message}\n"
     try:
         send_mail(MAIL_TO, subject, body)
         return jsonify({"ok": True, "msg": "送信を受け付けました。ありがとうございます！"}), 200
@@ -215,8 +219,8 @@ def send_mail(to_addr: str, subject: str, body: str):
     """シンプルなSMTP送信（UTF-8, SSL/STARTTLS自動）"""
     msg = MIMEText(body, _charset="utf-8")
     msg["Subject"] = str(Header(subject, "utf-8"))
-    msg["From"] = MAIL_FROM
-    msg["To"] = to_addr
+    msg["From"]    = MAIL_FROM
+    msg["To"]      = to_addr
 
     if SMTP_PORT == 465:
         context = ssl.create_default_context()
@@ -237,8 +241,7 @@ def send_mail(to_addr: str, subject: str, body: str):
             s.send_message(msg)
 
 # =========================================
-# ローカル起動
+# ローカル起動（本番はgunicorn等で起動）
 # =========================================
 if __name__ == "__main__":
-    # Render等の本番では WSGI サーバー（gunicorn等）で起動想定
     app.run(host="0.0.0.0", port=5000, debug=True)
