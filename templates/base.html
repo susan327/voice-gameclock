@@ -3,7 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}読み上げ対局時計{% endblock %}</title>
+
+  <title>{% block title %}読み上げ対局時計｜すーさんプロジェクト{% endblock %}</title>
+
+  {# ====== 基本SEO（各ページで上書き可） ====== #}
+  {% block meta_description %}
+  <meta name="description" content="将棋・囲碁・チェス対応の読み上げ対局時計。秒読み／考慮時間／フィッシャー／切れ負けを網羅。音声読み上げで臨場感UP。">
+  {% endblock %}
+  <meta name="robots" content="index,follow">
+
+  {# ====== 正規URL（ページ固有） ====== #}
+  <link rel="canonical" href="{{ request.url }}"/>
+
+  {# ====== OGP / Twitter Card（各ページで上書き可） ====== #}
+  {% block og_base %}
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{% block og_title %}読み上げ対局時計｜すーさんプロジェクト{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}将棋・囲碁・チェス対応の読み上げ対局時計。秒読み／考慮時間／フィッシャー／切れ負けをサポート。音声読み上げで緊張感アップ。{% endblock %}">
+  <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='ogp.png', _external=True) }}{% endblock %}">
+  {% endblock %}
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% block twitter_title %}読み上げ対局時計｜すーさんプロジェクト{% endblock %}">
+  <meta name="twitter:description" content="{% block twitter_description %}音声読み上げつき対局時計。将棋・囲碁・チェス対応。{% endblock %}">
+  <meta name="twitter:image" content="{{ url_for('static', filename='ogp.png', _external=True) }}">
+
+  {# ====== アイコン類（任意のファイルがある場合） ====== #}
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+
+  {# ====== CSS（元のスタイル維持） ====== #}
   <style>
     :root{
       --paper: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" fill="%23deb887"/><path d="M0 59h60" stroke="%23cdaa7d" stroke-width="2"/><path d="M0 30h60" stroke="%23cdaa7d" stroke-width="2"/><path d="M30 0v60" stroke="%23cdaa7d" stroke-width="2"/></svg>');
@@ -69,17 +99,41 @@
     }
     .flash.success{border-color:#8b5a2b}
     .flash.error{border-color:#7f1d1d}
+
     /* スクリーンリーダー向けライブ領域 */
     .sr-live{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+    /* 視覚的には隠すが見出しとして有効（SEO/アクセシビリティ向上） */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   </style>
+
+  {# 既存：各ページで追加したいhead要素を差し込む #}
   {% block head %}{% endblock %}
+
+  {# ====== 構造化データ（SoftwareApplication） ====== #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "読み上げ対局時計",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Web",
+    "url": "{{ request.url_root }}",
+    "description": "将棋・囲碁・チェス対応の音声読み上げ対局時計。秒読み・考慮時間・フィッシャー・切れ負けをサポート。",
+    "publisher": {
+      "@type": "Organization",
+      "name": "すーさんプロジェクト",
+      "url": "https://susanproject.jp"
+    }
+  }
+  </script>
 </head>
 <body>
-  <header>
+  <header role="banner">
     <div class="wrap">
       <div class="row" style="justify-content:space-between;">
-        <div class="brand">
-          <div>読み上げ対局時計</div>
+        <div class="brand" aria-label="サイト名">
+          <div aria-hidden="true">読み上げ対局時計</div>
         </div>
         <nav class="nav-links" aria-label="グローバルナビゲーション">
           <a href="{{ url_for('index') }}">ホーム</a>
@@ -104,7 +158,10 @@
     </div>
   </header>
 
-  <main class="wrap">
+  <main class="wrap" role="main">
+    <!-- 視覚的には非表示だが、ページのメイン見出しとして機能 -->
+    <h1 class="sr-only">読み上げ対局時計</h1>
+
     <!-- フラッシュメッセージ：ここで一元表示 -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -119,7 +176,7 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer>
+  <footer role="contentinfo">
     <div class="wrap foot">
       <div>© {{ now().year }} すーさんプロジェクト</div>
       <div class="foot-links" role="navigation" aria-label="フッターナビ">
@@ -142,7 +199,6 @@
     let unlocked = false;
 
     function lazyLoadVoices(retry=0){
-      // iOSは初回 getVoices() が空のことが多い → 遅延で何度か試す
       const list = speechSynthesis.getVoices();
       if (list && list.length) return;
       if (retry < 20) setTimeout(()=>lazyLoadVoices(retry+1), 250);
@@ -151,34 +207,27 @@
     function unlockSpeech(){
       if (unlocked) return;
       try {
-        // 無音の短い発話で“ユーザー操作由来の再生”を1度だけ確立
         const u = new SpeechSynthesisUtterance("スタート");
         u.lang = "ja-JP";
-        u.volume = 0;  // 無音
+        u.volume = 0;
         u.rate = 1;
         speechSynthesis.speak(u);
-        // キュー掃除（権限は維持される）
         setTimeout(()=>speechSynthesis.cancel(), 0);
-        // 念のため resume
         speechSynthesis.resume?.();
         unlocked = true;
       } catch(e) {}
     }
 
-    // 最初のユーザー操作で解放（どの画面でもOK）
     ['click','touchend','keydown'].forEach(ev=>{
       window.addEventListener(ev, unlockSpeech, { once:true, capture:true });
     });
 
-    // タブ復帰・フォーカス復帰で読み上げが止まる問題をケア
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) speechSynthesis.resume?.(); });
     window.addEventListener('focus', ()=>{ speechSynthesis.resume?.(); });
 
-    // iOSの voice リスト遅延対策
     lazyLoadVoices();
     speechSynthesis.onvoiceschanged = lazyLoadVoices;
 
-    // 既存ページからも任意で呼べるように公開（任意）
     window.unlockSpeech = unlockSpeech;
   })();
   </script>
